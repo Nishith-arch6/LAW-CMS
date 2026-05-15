@@ -27,6 +27,8 @@ import 'features/profile/screens/profile_screen.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
+
 GoRouter _router(WidgetRef ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -167,13 +169,15 @@ class LegalCMSApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     final router = _router(ref);
     return MaterialApp.router(
+      key: ValueKey(themeMode),
       title: 'Legal CMS',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.light,
+      themeMode: themeMode,
       routerConfig: router,
       builder: (context, child) => OfflineBanner(child: child!),
     );
@@ -242,6 +246,17 @@ class _Shell extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.notifications_outlined),
                       onPressed: () {},
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.person_outline),
+                          onPressed: () => context.push('/profile'),
+                          tooltip: 'Profile',
+                        ),
+                        Text('Profile', style: TextStyle(fontSize: 9, color: Colors.white54)),
+                      ],
                     ),
                     const Spacer(),
                     IconButton(

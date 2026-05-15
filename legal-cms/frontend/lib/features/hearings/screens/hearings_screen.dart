@@ -175,41 +175,23 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
                           child: Text('${grouped[_selectedDay]!.length} hearing(s) on ${DateFormat('MMM dd, yyyy').format(_selectedDay)}',
                             style: Theme.of(context).textTheme.bodySmall),
                         ),
-                      const SizedBox(height: 4),
-                      Expanded(
-                        child: state.isLoading
-                            ? const Center(child: CircularProgressIndicator())
-                            : filtered.isEmpty
-                                ? const EmptyState(icon: Icons.event_busy, title: 'No hearings found')
-                                : ListView.builder(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                    itemCount: filtered.length,
-                                    itemBuilder: (_, i) => HearingCard(
-                                      hearing: filtered[i],
-                                      onTap: () => _showHearingDetail(filtered[i]),
-                                    ),
-                                  ),
-                      ),
                     ],
                   ),
                 ),
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 8),
-                      if (_showCalendar)
-                        Card(
-                          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                          child: _buildCalendar(context, grouped),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Text(
+                          _showCalendar && grouped[_selectedDay] != null
+                              ? 'Hearings on ${DateFormat('MMM dd, yyyy').format(_selectedDay)}'
+                              : 'All Hearings',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                         ),
-                      if (grouped[_selectedDay] != null && _showCalendar)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                          child: Text('${grouped[_selectedDay]!.length} hearing(s) on ${DateFormat('MMM dd, yyyy').format(_selectedDay)}',
-                            style: Theme.of(context).textTheme.bodySmall),
-                        ),
-                      const SizedBox(height: 4),
+                      ),
                       Expanded(child: _hearingList(state, filtered)),
                     ],
                   ),

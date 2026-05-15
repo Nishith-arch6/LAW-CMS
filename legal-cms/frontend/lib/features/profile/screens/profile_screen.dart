@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 
+import '../../../main.dart' show themeModeProvider;
 import '../../../core/theme/app_theme.dart';
 import '../../../core/api/api_endpoints.dart';
 import '../../../core/api/api_client.dart';
@@ -19,7 +20,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isEditing = false;
   bool _notificationsEnabled = true;
-  bool _darkMode = false;
 
   final _nameCtrl = TextEditingController();
   final _barNumCtrl = TextEditingController();
@@ -223,8 +223,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               SwitchListTile(
                 title: const Text('Dark Mode'),
                 subtitle: const Text('Use dark theme'),
-                value: _darkMode,
-                onChanged: (v) => setState(() => _darkMode = v),
+                value: ref.watch(themeModeProvider) == ThemeMode.dark,
+                onChanged: (v) {
+                  ref.read(themeModeProvider.notifier).state = v ? ThemeMode.dark : ThemeMode.light;
+                  context.go('/');
+                },
               ),
             ],
           ),

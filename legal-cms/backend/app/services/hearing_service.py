@@ -23,6 +23,7 @@ class HearingService:
                 Case.advocate_id == self.user.id,
                 Case.is_deleted == False,
             )
+            .distinct()
         )
 
     async def list_hearings(

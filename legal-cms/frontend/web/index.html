@@ -105,46 +105,6 @@
         );
       pointer-events: none;
     }
-    #error-screen {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      z-index: 1000;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
-    }
-    #error-screen .error-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-    }
-    #error-screen h2 {
-      color: #FF6B6B;
-      font-size: 18px;
-      margin-bottom: 8px;
-    }
-    #error-screen p {
-      color: rgba(245, 230, 211, 0.7);
-      font-size: 14px;
-      margin-bottom: 24px;
-      line-height: 1.5;
-    }
-    #error-screen button {
-      background: #C9A84C;
-      color: #1A0F0A;
-      border: none;
-      padding: 12px 32px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    #error-screen button:hover {
-      background: #D4B96A;
-    }
     .hidden { display: none !important; }
   </style>
 </head>
@@ -157,29 +117,16 @@
     <div class="loader" aria-hidden="true"></div>
     <div class="loader-text">Loading</div>
   </div>
-  <div id="error-screen">
-    <div class="error-icon">&#x26A0;</div>
-    <h2>Unable to Load</h2>
-    <p>This app requires WebGL which is not available on your browser. Please try using a different browser or enable WebGL in your settings.</p>
-    <button onclick="this.textContent='Retrying...';location.reload()">Try Again</button>
-  </div>
+
   <script>
     (function() {
       var loading = document.getElementById('loading-screen');
-      var errorEl = document.getElementById('error-screen');
-
-      setTimeout(function() {
-        loading.style.display = 'none';
-        errorEl.style.display = 'flex';
-      }, 30000);
-
       var observer = new MutationObserver(function(mutations) {
         for (var i = 0; i < mutations.length; i++) {
           for (var j = 0; j < mutations[i].addedNodes.length; j++) {
             var node = mutations[i].addedNodes[j];
             if (node.nodeType === 1 && (node.tagName === 'FLT-GLASS-PANE' || node.id === 'flt-glass-pane')) {
               loading.style.display = 'none';
-              errorEl.style.display = 'none';
               observer.disconnect();
               return;
             }

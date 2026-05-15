@@ -106,16 +106,21 @@ class AppTheme {
   }
 
   static ThemeData dark() {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.courtGold,
+      brightness: Brightness.dark,
+    );
     return ThemeData(
       useMaterial3: true,
+      colorScheme: colorScheme,
       brightness: Brightness.dark,
-      colorSchemeSeed: AppColors.courtGold,
       textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
       scaffoldBackgroundColor: AppColors.surfaceDark,
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
         titleTextStyle: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
       ),
       cardTheme: CardThemeData(
@@ -128,17 +133,51 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
+          backgroundColor: AppColors.courtGold,
+          foregroundColor: AppColors.courtDarkBrown,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        fillColor: AppColors.cardDark,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade700),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.courtGold, width: 1.5),
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        labelStyle: GoogleFonts.inter(fontSize: 14),
+        labelStyle: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade400),
+      ),
+      dividerTheme: const DividerThemeData(space: 1, thickness: 1),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.courtGold,
+        foregroundColor: AppColors.courtDarkBrown,
+        elevation: 4,
       ),
       chipTheme: ChipThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        elevation: 0,
+        backgroundColor: AppColors.cardDark,
+        indicatorColor: AppColors.courtGold.withAlpha(30),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.courtGold);
+          }
+          return GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade400);
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.courtGold, size: 22);
+          }
+          return IconThemeData(color: Colors.grey.shade400, size: 22);
+        }),
       ),
     );
   }

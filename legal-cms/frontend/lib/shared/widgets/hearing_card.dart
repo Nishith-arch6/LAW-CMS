@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../models/hearing_model.dart';
 import '../../core/theme/app_theme.dart';
@@ -13,9 +14,8 @@ class HearingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final time = hearing.hearingTime != null
-        ? hearing.hearingTime!.substring(0, 5)
-        : '--:--';
+    final dateStr = _formatDate(hearing.hearingDate);
+    final timeStr = _formatTime(hearing.hearingTime);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -57,9 +57,13 @@ class HearingCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Row(
                       children: [
+                        const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(dateStr, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                        const SizedBox(width: 12),
                         const Icon(Icons.access_time, size: 14, color: Colors.grey),
                         const SizedBox(width: 4),
-                        Text(time, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                        Text(timeStr, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                         if (hearing.courtRoom != null) ...[
                           const SizedBox(width: 12),
                           const Icon(Icons.meeting_room, size: 14, color: Colors.grey),
@@ -77,5 +81,22 @@ class HearingCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDate(String d) {
+    try {
+      return DateFormat('MMM dd, yyyy').format(DateTime.parse(d));
+    } catch (_) {
+      return d;
+    }
+  }
+
+  String _formatTime(String? t) {
+    if (t == null || t.length < 5) return '--:--';
+    try {
+      return t.substring(0, 5);
+    } catch (_) {
+      return '--:--';
+    }
   }
 }
