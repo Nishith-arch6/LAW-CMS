@@ -1,0 +1,38 @@
+# Flutter SDK (bundled locally)
+/flutter/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.env
+
+# Backend
+legal-cms/backend/venv/
+legal-cms/backend/*.log
+legal-cms/backend/*.err
+legal-cms/backend/uploads/
+
+# Frontend (Flutter)
+legal-cms/frontend/build/
+legal-cms/frontend/.dart_tool/
+legal-cms/frontend/.packages
+# Keep pubspec.lock committed for reproducible builds
+
+# Frontend (React - old/deprecated)
+legal-cms/frontend-react/node_modules/
+legal-cms/frontend-react/build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

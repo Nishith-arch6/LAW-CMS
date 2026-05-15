@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy-900: #0D1B2A;
+  --color-navy-800: #1B2838;
+  --color-navy-700: #2C3A4A;
+  --color-gold-400: #C9A84C;
+  --color-gold-300: #D4B96A;
+  --color-gold-200: #E0CC8A;
+  --color-gold-100: #F0E4C0;
+  --color-wood-900: #1A0F0A;
+  --color-wood-800: #2C1810;
+  --color-cream: #F5E6D3;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 100px white inset;
+  -webkit-text-fill-color: #0D1B2A;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-fade-in { animation: fadeIn 0.8s ease-out forwards; }
+.animate-slide-up { animation: slideUp 0.6s ease-out forwards; }
+.animate-pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }

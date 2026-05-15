@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Legal CMS - Smart Legal Practice Management">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Legal CMS">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>Legal CMS</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: linear-gradient(135deg, #1A0F0A 0%, #0D1B2A 50%, #1A0F0A 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      overflow: hidden;
+    }
+    #loading-screen .gavel {
+      font-size: 72px;
+      display: block;
+      margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+    #loading-screen p {
+      color: rgba(245, 230, 211, 0.7);
+      font-size: 14px;
+      font-style: italic;
+      margin-bottom: 32px;
+    }
+    .loader {
+      display: inline-block;
+      position: relative;
+      width: 48px;
+      height: 48px;
+    }
+    .loader::before {
+      content: '';
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(201, 168, 76, 0.15);
+      border-radius: 50%;
+      border-top-color: #C9A84C;
+      animation: spin 1s linear infinite;
+    }
+    .loader-text {
+      color: rgba(245, 230, 211, 0.5);
+      font-size: 12px;
+      margin-top: 16px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    /* Decorative corner lines */
+    #loading-screen::before,
+    #loading-screen::after {
+      content: '';
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-color: rgba(201, 168, 76, 0.2);
+      border-style: solid;
+    }
+    #loading-screen::before {
+      top: -20px;
+      left: -20px;
+      border-width: 2px 0 0 2px;
+    }
+    #loading-screen::after {
+      bottom: -20px;
+      right: -20px;
+      border-width: 0 2px 2px 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    /* Background decorative pattern */
+    .bg-pattern {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 40px,
+          rgba(201, 168, 76, 0.03) 40px,
+          rgba(201, 168, 76, 0.03) 41px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 40px,
+          rgba(201, 168, 76, 0.03) 40px,
+          rgba(201, 168, 76, 0.03) 41px
+        );
+      pointer-events: none;
+    }
+    #error-screen {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    #error-screen .error-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    #error-screen h2 {
+      color: #FF6B6B;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    #error-screen p {
+      color: rgba(245, 230, 211, 0.7);
+      font-size: 14px;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    #error-screen button {
+      background: #C9A84C;
+      color: #1A0F0A;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    #error-screen button:hover {
+      background: #D4B96A;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="bg-pattern"></div>
+  <div id="loading-screen" role="status" aria-label="Loading">
+    <span class="gavel" aria-hidden="true">&#x2696;</span>
+    <h1>Legal CMS</h1>
+    <p>Loading...</p>
+    <div class="loader" aria-hidden="true"></div>
+    <div class="loader-text">Loading</div>
+  </div>
+  <div id="error-screen">
+    <div class="error-icon">&#x26A0;</div>
+    <h2>Unable to Load</h2>
+    <p>This app requires WebGL which is not available on your browser. Please try using a different browser or enable WebGL in your settings.</p>
+    <button onclick="this.textContent='Retrying...';location.reload()">Try Again</button>
+  </div>
+  <script>
+    (function() {
+      var loading = document.getElementById('loading-screen');
+      var errorEl = document.getElementById('error-screen');
+
+      setTimeout(function() {
+        loading.style.display = 'none';
+        errorEl.style.display = 'flex';
+      }, 30000);
+
+      var observer = new MutationObserver(function(mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+            var node = mutations[i].addedNodes[j];
+            if (node.nodeType === 1 && (node.tagName === 'FLT-GLASS-PANE' || node.id === 'flt-glass-pane')) {
+              loading.style.display = 'none';
+              errorEl.style.display = 'none';
+              observer.disconnect();
+              return;
+            }
+          }
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: false });
+    })();
+  </script>
+  <script src="flutter_bootstrap.js" defer></script>
+</body>
+</html>
