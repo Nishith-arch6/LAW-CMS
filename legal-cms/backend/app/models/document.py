@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, LargeBinary, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -21,6 +21,7 @@ class Document(Base):
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     case = relationship("Case", back_populates="documents")
+    file_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     uploader = relationship("User", back_populates="uploaded_documents")
 
     def __repr__(self) -> str:

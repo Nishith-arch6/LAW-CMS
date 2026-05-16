@@ -3,7 +3,7 @@ import os
 from typing import Any
 
 from fastapi import HTTPException, UploadFile, status
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -16,7 +16,6 @@ from app.schemas.document import DocumentResponse
 from app.utils.s3_storage import (
     delete_file,
     download_fileobj,
-    get_s3_url,
     upload_fileobj,
 )
 from app.utils.storage import (
@@ -81,17 +80,12 @@ class FileService:
         if settings.use_s3:
             s3_key = f"{subdir}/{unique_name}"
             buf = io.BytesIO(content)
-            result = await upload_fileobj(buf, s3_key)
-            if result:
-                file_path = f"s3://{settings.s3_bucket}/{s3_key}"
-            else:
-                file_path = build_upload_path(self.user.id, case_id, unique_name)
-                with open(file_path, "wb") as f:
-                    f.write(content)
+            uploaded = await upload_fileobj(buf, s3_key)
+            file_data = None
+            file_path = f"s3://{settings.s3_bucket}/{s3_key}" if uploaded else build_upload_path(self.user.id, case_id, unique_name)
         else:
-            file_path = build_upload_path(self.user.id, case_id, unique_name)
-            with open(file_path, "wb") as f:
-                f.write(content)
+            file_data = content
+            file_path = f"db://{self.user.id}/{case_id}/{unique_name}"
 
         doc = Document(
             case_id=case_id,
@@ -99,6 +93,7 @@ class FileService:
             file_path=file_path,
             file_type=mime,
             file_size=len(content),
+            file_data=file_data,
             description=description,
             uploaded_by=self.user.id,
         )
@@ -120,6 +115,12 @@ class FileService:
         )
 
     async def get_file_response(self, doc: Document) -> Response:
+        if doc.file_data:
+            return Response(
+                content=doc.file_data,
+                media_type=doc.file_type or "application/octet-stream",
+                headers={"Content-Disposition": f'attachment; filename="{doc.file_name}"'},
+            )
         if doc.file_path.startswith("s3://"):
             parts = doc.file_path.replace("s3://", "").split("/", 1)
             if len(parts) == 2:
@@ -131,12 +132,12 @@ class FileService:
                         headers={"Content-Disposition": f'attachment; filename="{doc.file_name}"'},
                     )
         if os.path.exists(doc.file_path):
-            from fastapi.responses import FileResponse
-            return FileResponse(
-                path=doc.file_path,
-                filename=doc.file_name,
-                media_type=doc.file_type or "application/octet-stream",
-            )
+            with open(doc.file_path, "rb") as f:
+                return Response(
+                    content=f.read(),
+                    media_type=doc.file_type or "application/octet-stream",
+                    headers={"Content-Disposition": f'attachment; filename="{doc.file_name}"'},
+                )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
     async def list_all_documents(
@@ -219,7 +220,7 @@ class FileService:
             parts = doc.file_path.replace("s3://", "").split("/", 1)
             if len(parts) == 2:
                 await delete_file(parts[1])
-        elif os.path.exists(doc.file_path):
+        elif not doc.file_data and os.path.exists(doc.file_path):
             os.remove(doc.file_path)
         await self.db.delete(doc)
         await self.db.flush()
