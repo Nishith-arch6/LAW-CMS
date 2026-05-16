@@ -1,11 +1,11 @@
 # Smart Legal Case Management System
 
-[![Frontend](https://img.shields.io/badge/Frontend-Vercel-000?logo=vercel)](https://web-taupe-iota-23.vercel.app)
+[![Frontend](https://img.shields.io/badge/Frontend-Vercel-000?logo=vercel)](https://law-cms-app.vercel.app)
 [![Backend](https://img.shields.io/badge/Backend-Vercel-000?logo=vercel)](https://law-cms-backend.vercel.app)
 [![API Status](https://img.shields.io/badge/API-Health%20%E2%9C%94-brightgreen)](https://law-cms-backend.vercel.app/health)
 [![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-blueviolet)](https://neon.tech)
 
-**Live Demo:** [https://web-taupe-iota-23.vercel.app](https://web-taupe-iota-23.vercel.app)  
+**Live Demo:** [https://law-cms-app.vercel.app](https://law-cms-app.vercel.app)  
 **API:** [https://law-cms-backend.vercel.app](https://law-cms-backend.vercel.app)  
 **Login:** `advocate.sharma@legalcms.com` / `advocate123`
 
@@ -162,7 +162,7 @@ The app is deployed on Vercel (serverless) with a Neon PostgreSQL database.
 
 | Service   | URL                                                                |
 |-----------|--------------------------------------------------------------------|
-| Frontend  | [https://web-taupe-iota-23.vercel.app](https://web-taupe-iota-23.vercel.app) |
+| Frontend  | [https://law-cms-app.vercel.app](https://law-cms-app.vercel.app) |
 | Backend   | [https://law-cms-backend.vercel.app](https://law-cms-backend.vercel.app)     |
 | Health    | [https://law-cms-backend.vercel.app/health](https://law-cms-backend.vercel.app/health) |
 
