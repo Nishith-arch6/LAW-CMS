@@ -1,8 +1,19 @@
 # Smart Legal Case Management System
 
-A monorepo for a legal case management platform with AI-powered document analysis.
+[![Frontend](https://img.shields.io/badge/Frontend-Vercel-000?logo=vercel)](https://web-taupe-iota-23.vercel.app)
+[![Backend](https://img.shields.io/badge/Backend-Vercel-000?logo=vercel)](https://law-cms-backend.vercel.app)
+[![API Status](https://img.shields.io/badge/API-Health%20%E2%9C%94-brightgreen)](https://law-cms-backend.vercel.app/health)
+[![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-blueviolet)](https://neon.tech)
 
-**Stack:** FastAPI (Python 3.11), Flutter, PostgreSQL 15, TensorFlow / scikit-learn, Docker
+**Live Demo:** [https://web-taupe-iota-23.vercel.app](https://web-taupe-iota-23.vercel.app)  
+**API:** [https://law-cms-backend.vercel.app](https://law-cms-backend.vercel.app)  
+**Login:** `advocate.sharma@legalcms.com` / `advocate123`
+
+---
+
+A legal case management platform with AI-powered document analysis.
+
+**Stack:** FastAPI (Python 3.12), Flutter, PostgreSQL 16 (Neon), TensorFlow / scikit-learn
 
 ## Structure
 
@@ -143,15 +154,42 @@ Dev URLs:
 
 ---
 
-## Production Deployment
+## Deployment
 
-### Prerequisites
+### Vercel (Current)
+
+The app is deployed on Vercel (serverless) with a Neon PostgreSQL database.
+
+| Service   | URL                                                                |
+|-----------|--------------------------------------------------------------------|
+| Frontend  | [https://web-taupe-iota-23.vercel.app](https://web-taupe-iota-23.vercel.app) |
+| Backend   | [https://law-cms-backend.vercel.app](https://law-cms-backend.vercel.app)     |
+| Health    | [https://law-cms-backend.vercel.app/health](https://law-cms-backend.vercel.app/health) |
+
+**Limitations (serverless):**
+- No file upload persistence
+- No OCR (Tesseract not available)
+- No background scheduler (reminders/digests disabled)
+- Cold starts on first request
+
+### Render (Recommended for Full Features)
+
+To deploy with persistent storage, OCR, and scheduled tasks:
+
+1. Push to GitHub
+2. Go to [render.com](https://render.com) → New Blueprint
+3. Connect your repo and select `legal-cms/backend/render.yaml`
+4. Set `SECRET_KEY` as an environment variable
+
+### Docker (Self-Hosted)
+
+#### Prerequisites
 
 - Docker & Docker Compose on the host
 - A domain name pointing to the server
 - Ports 80 and 443 open
 
-### 1. Clone & Configure
+#### 1. Clone & Configure
 
 ```bash
 git clone <repo-url> /opt/legal-cms
@@ -170,46 +208,29 @@ POSTGRES_PASSWORD=<strong-db-password>
 CORS_ORIGINS=https://yourdomain.com
 ```
 
-### 2. Update Nginx Domain
+#### 2. Update Nginx Domain
 
 Edit `docker/nginx.prod.conf` — replace `legalcms.example.com` with your domain.
 
-### 3. Obtain SSL Certificate
+#### 3. Obtain SSL Certificate
 
 ```bash
 chmod +x scripts/init-ssl.sh
 ./scripts/init-ssl.sh yourdomain.com admin@yourdomain.com
 ```
 
-### 4. Deploy
+#### 4. Deploy
 
 ```bash
 chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
-### 5. Verify
+#### 5. Verify
 
 ```bash
 curl https://yourdomain.com/health
 # → {"status": "ok"}
-```
-
-### Deploy Script Options
-
-```bash
-# Skip migrations (e.g., after a rollback)
-./scripts/deploy.sh --no-migrate
-
-# Use a specific env file
-./scripts/deploy.sh --env-file /path/to/production.env
-```
-
-### Manual Migrations
-
-```bash
-docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
-docker compose -f docker-compose.prod.yml run --rm backend alembic revision --autogenerate -m "migration_name"
 ```
 
 ---

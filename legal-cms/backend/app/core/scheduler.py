@@ -157,6 +157,10 @@ async def daily_digest():
 
 
 def start_scheduler():
+    import os
+    if os.environ.get("VERCEL") == "1":
+        logger.info("Vercel environment detected — scheduler disabled")
+        return
     if scheduler.running:
         return
     scheduler.add_job(

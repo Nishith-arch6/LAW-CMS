@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.env
+
+# Flutter
+flutter/
+build/
+frontend/build/
+backend/static/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (if any)
+node_modules/

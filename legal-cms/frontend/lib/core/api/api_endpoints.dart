@@ -1,5 +1,5 @@
 class ApiEndpoints {
-  static const String baseUrl = '/api';
+  static const String baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '/api');
 
   static const String login = '/auth/login';
   static const String register = '/auth/register';
