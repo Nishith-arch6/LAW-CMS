@@ -193,12 +193,15 @@ class _Shell extends ConsumerWidget {
     final auth = ref.watch(authProvider);
     final sel = _selectedIndex(context);
 
+    void goProfile() => context.push('/profile');
+
     final navDestinations = const [
       NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Dashboard'),
       NavigationDestination(icon: Icon(Icons.folder_outlined), selectedIcon: Icon(Icons.folder), label: 'Cases'),
       NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Clients'),
       NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Hearings'),
       NavigationDestination(icon: Icon(Icons.description_outlined), selectedIcon: Icon(Icons.description), label: 'Docs'),
+      NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
     ];
 
     final railDestinations = <NavigationRailDestination>[
@@ -216,6 +219,7 @@ class _Shell extends ConsumerWidget {
         case 2: context.go('/clients');
         case 3: context.go('/hearings');
         case 4: context.go('/documents');
+        case 5: goProfile();
       }
     }
 
@@ -283,62 +287,23 @@ class _Shell extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.courtDarkBrown, AppColors.courtNavy],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      body: Column(
+        children: [
+          Expanded(child: child),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 20, offset: const Offset(0, -4)),
+              ],
             ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(24),
+            child: NavigationBar(
+              selectedIndex: sel,
+              onDestinationSelected: onNav,
+              destinations: navDestinations,
             ),
           ),
-          child: AppBar(
-            title: Text(auth.user?.fullName ?? 'Legal CMS',
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.person_outline),
-                onPressed: () => context.push('/profile'),
-                tooltip: 'Profile',
-              ),
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {},
-              ),
-              Container(
-                margin: const EdgeInsets.only(right: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(30),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.logout, color: AppColors.error),
-                  onPressed: () => ref.read(authProvider.notifier).logout(),
-                  tooltip: 'Logout',
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(color: Colors.black.withAlpha(13), blurRadius: 20, offset: const Offset(0, -4)),
-          ],
-        ),
-        child: NavigationBar(
-          selectedIndex: sel,
-          onDestinationSelected: onNav,
-          destinations: navDestinations,
-        ),
+        ],
       ),
     );
   }
@@ -350,6 +315,7 @@ class _Shell extends ConsumerWidget {
     if (loc.startsWith('/clients')) return 2;
     if (loc.startsWith('/hearings')) return 3;
     if (loc.startsWith('/documents')) return 4;
+    if (loc.startsWith('/profile')) return 5;
     return 0;
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -55,34 +57,36 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
     }
   }
 
-  Future<void> uploadDocument({
+  Future<DocumentModel?> uploadDocument({
     required int caseId,
-    required String filePath,
+    required Uint8List fileBytes,
     required String fileName,
     String? description,
   }) async {
     state = state.copyWith(isUploading: true, uploadProgress: 0, error: null);
     try {
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'file': MultipartFile.fromBytes(fileBytes, filename: fileName),
         'case_id': caseId,
         'description': description,
       });
 
-      await _dio.post(
+      final res = await _dio.post(
         '${ApiEndpoints.documents}/upload',
         data: formData,
-        onSendProgress: (sent, total) {
-          if (total > 0) {
-            state = state.copyWith(uploadProgress: sent / total);
-          }
-        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 120),
+          receiveTimeout: const Duration(seconds: 120),
+          connectTimeout: const Duration(seconds: 60),
+        ),
       );
 
       state = state.copyWith(isUploading: false, uploadProgress: 1);
       await loadCaseDocuments(caseId);
+      return DocumentModel.fromJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
       state = state.copyWith(isUploading: false, error: _errorMsg(e));
+      return null;
     }
   }
 

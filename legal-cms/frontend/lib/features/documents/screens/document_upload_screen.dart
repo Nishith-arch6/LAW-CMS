@@ -1,9 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../providers/documents_provider.dart';
 import '../../../shared/models/document_model.dart';
+import '../../../shared/widgets/document_viewer.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/loading_overlay.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
@@ -29,16 +34,20 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'txt'],
+      withData: true,
     );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
-    if (file.path == null) return;
+    if (file.bytes == null) return;
 
-    await ref.read(documentsProvider.notifier).uploadDocument(
+    final doc = await ref.read(documentsProvider.notifier).uploadDocument(
       caseId: widget.caseId,
-      filePath: file.path!,
+      fileBytes: file.bytes!,
       fileName: file.name,
     );
+    if (doc != null && mounted) {
+      showDocumentViewer(context, ref, doc);
+    }
   }
 
   @override
@@ -89,23 +98,16 @@ class _DocumentUploadScreenState extends ConsumerState<DocumentUploadScreen> {
   }
 }
 
-class _DocumentTile extends StatefulWidget {
+class _DocumentTile extends ConsumerWidget {
   final DocumentModel doc;
   final VoidCallback onDelete;
 
   const _DocumentTile({required this.doc, required this.onDelete});
 
   @override
-  State<_DocumentTile> createState() => _DocumentTileState();
-}
-
-class _DocumentTileState extends State<_DocumentTile> {
-  bool _showOcr = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final d = widget.doc;
+    final d = doc;
     return Card(
       child: Column(
         children: [
@@ -117,42 +119,31 @@ class _DocumentTileState extends State<_DocumentTile> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.download, size: 20),
-                  onPressed: () {},
+                  icon: const Icon(Icons.visibility_outlined, size: 20),
+                  onPressed: () => showDocumentViewer(context, ref, d),
+                  tooltip: 'View',
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.error),
-                  onPressed: widget.onDelete,
+                  onPressed: onDelete,
                 ),
               ],
             ),
+            onTap: () => showDocumentViewer(context, ref, d),
           ),
-          if (d.ocrText != null)
+          if (d.ocrText != null && d.ocrText!.isNotEmpty)
             InkWell(
-              onTap: () => setState(() => _showOcr = !_showOcr),
+              onTap: null,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Row(
                   children: [
                     const Icon(Icons.text_snippet, size: 16, color: AppColors.secondary),
                     const SizedBox(width: 4),
-                    Text(_showOcr ? 'Hide OCR text' : 'Show OCR text',
+                    Text('OCR available',
                         style: theme.textTheme.bodySmall?.copyWith(color: AppColors.secondary)),
                   ],
                 ),
-              ),
-            ),
-          if (_showOcr && d.ocrText != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(d.ocrText!, style: theme.textTheme.bodySmall),
               ),
             ),
         ],

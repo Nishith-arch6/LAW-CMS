@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +10,7 @@ import '../providers/documents_provider.dart';
 import '../../cases/providers/cases_provider.dart';
 import '../../../shared/models/document_model.dart';
 import '../../../shared/models/case_model.dart';
+import '../../../shared/widgets/document_viewer.dart';
 import '../../../shared/widgets/gradient_app_bar.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/api/api_client.dart';
@@ -88,31 +91,64 @@ class AllDocumentsNotifier extends StateNotifier<AllDocumentsState> {
     }
   }
 
-  Future<void> uploadDocument({
+  Future<DocumentModel?> uploadDocument({
     required int caseId,
-    required String filePath,
+    required Uint8List fileBytes,
     required String fileName,
+    String? description,
   }) async {
     state = state.copyWith(isUploading: true, uploadProgress: 0, error: null);
     try {
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'file': MultipartFile.fromBytes(fileBytes, filename: fileName),
         'case_id': caseId,
+        'description': description,
       });
-      await _dio.post(
+      final res = await _dio.post(
         '${ApiEndpoints.documentsList}upload',
         data: formData,
-        onSendProgress: (sent, total) {
-          if (total > 0) {
-            state = state.copyWith(uploadProgress: sent / total);
-          }
-        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 120),
+          receiveTimeout: const Duration(seconds: 120),
+          connectTimeout: const Duration(seconds: 60),
+        ),
       );
       state = state.copyWith(isUploading: false, uploadProgress: 1);
       await loadDocuments(refresh: true);
+      return DocumentModel.fromJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
+      final msg = e.response?.data?['detail'] as String?
+          ?? e.message
+          ?? 'Upload failed. Check your connection and try again.';
       state = state.copyWith(
         isUploading: false,
+        error: msg,
+      );
+      return null;
+    }
+  }
+
+  Future<void> deleteDocument(int docId) async {
+    try {
+      await _dio.delete(ApiEndpoints.documentDelete(docId));
+      await loadDocuments(refresh: true);
+    } on DioException catch (e) {
+      state = state.copyWith(
+        error: e.response?.data?['detail'] as String? ?? e.message ?? 'Something went wrong',
+      );
+    }
+  }
+
+  Future<void> deleteDocuments(List<int> docIds) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      for (final id in docIds) {
+        await _dio.delete(ApiEndpoints.documentDelete(id));
+      }
+      await loadDocuments(refresh: true);
+    } on DioException catch (e) {
+      state = state.copyWith(
+        isLoading: false,
         error: e.response?.data?['detail'] as String? ?? e.message ?? 'Something went wrong',
       );
     }
@@ -138,6 +174,8 @@ class DocumentsListScreen extends ConsumerStatefulWidget {
 class _DocumentsListScreenState extends ConsumerState<DocumentsListScreen> {
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  bool _isSelectMode = false;
+  final Set<int> _selectedIds = {};
 
   @override
   void initState() {
@@ -159,34 +197,86 @@ class _DocumentsListScreenState extends ConsumerState<DocumentsListScreen> {
     }
   }
 
+  void _toggleSelectMode() {
+    setState(() {
+      _isSelectMode = !_isSelectMode;
+      if (!_isSelectMode) _selectedIds.clear();
+    });
+  }
+
+  void _toggleSelection(int id) {
+    setState(() {
+      if (_selectedIds.contains(id)) {
+        _selectedIds.remove(id);
+        if (_selectedIds.isEmpty) _isSelectMode = false;
+      } else {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  void _selectAll(List<DocumentModel> docs) {
+    setState(() {
+      if (_selectedIds.length == docs.length) {
+        _selectedIds.clear();
+        _isSelectMode = false;
+      } else {
+        _selectedIds.addAll(docs.map((d) => d.id));
+      }
+    });
+  }
+
+  Future<void> _deleteSelected() async {
+    final count = _selectedIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Documents'),
+        content: Text('Remove $count selected document${count == 1 ? '' : 's'}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final ids = List<int>.from(_selectedIds);
+    setState(() {
+      _isSelectMode = false;
+      _selectedIds.clear();
+    });
+    ref.read(allDocumentsProvider.notifier).deleteDocuments(ids);
+  }
+
   Future<void> _pickAndUpload() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'txt'],
+      withData: true,
     );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
-    if (file.path == null) return;
-    _showCasePicker(file.path!, file.name);
+    if (file.bytes == null) return;
+    _showCasePicker(file.bytes!, file.name);
   }
 
-  void _showCasePicker(String filePath, String fileName) {
+  Future<void> _showCasePicker(Uint8List fileBytes, String fileName) async {
     final casesAsync = ref.read(casesProvider.notifier);
     casesAsync.loadCases(refresh: true);
-    showDialog(
+    final doc = await showDialog<DocumentModel>(
       context: context,
       builder: (ctx) => _CasePickerDialog(
-        filePath: filePath,
+        fileBytes: fileBytes,
         fileName: fileName,
-        onUpload: (caseId) {
-          ref.read(allDocumentsProvider.notifier).uploadDocument(
-            caseId: caseId,
-            filePath: filePath,
-            fileName: fileName,
-          );
-        },
       ),
     );
+    if (doc != null && context.mounted) {
+      showDocumentViewer(context, ref, doc);
+    }
   }
 
   @override
@@ -195,9 +285,37 @@ class _DocumentsListScreenState extends ConsumerState<DocumentsListScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: const GradientAppBar(title: Text('Documents')),
+      appBar: GradientAppBar(
+        title: Text(_isSelectMode ? '${_selectedIds.length} selected' : 'Documents'),
+        actions: [
+          if (state.documents.isNotEmpty)
+            IconButton(
+              icon: Icon(_isSelectMode ? Icons.close : Icons.checklist),
+              onPressed: _toggleSelectMode,
+              tooltip: _isSelectMode ? 'Cancel' : 'Select',
+            ),
+          if (_isSelectMode)
+            IconButton(
+              icon: const Icon(Icons.select_all),
+              onPressed: () => _selectAll(state.documents),
+              tooltip: 'Select all',
+            ),
+        ],
+      ),
       body: Column(
         children: [
+          if (_isSelectMode && _selectedIds.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: AppColors.error.withAlpha(20),
+              child: TextButton.icon(
+                onPressed: _deleteSelected,
+                icon: const Icon(Icons.delete, color: AppColors.error, size: 18),
+                label: Text('Delete ${_selectedIds.length} selected',
+                    style: const TextStyle(color: AppColors.error)),
+              ),
+            ),
           if (state.isUploading)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -261,88 +379,136 @@ class _DocumentsListScreenState extends ConsumerState<DocumentsListScreen> {
                               child: CircularProgressIndicator(),
                             ));
                           }
-                          return _DocumentListTile(state.documents[i]);
+                          return _DocumentListTile(
+                            state.documents[i],
+                            isSelectMode: _isSelectMode,
+                            isSelected: _selectedIds.contains(state.documents[i].id),
+                            onToggle: () => _toggleSelection(state.documents[i].id),
+                          );
                         },
                       ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: state.isUploading ? null : _pickAndUpload,
-        icon: const Icon(Icons.upload_file),
-        label: const Text('Upload'),
-      ),
+      floatingActionButton: _isSelectMode
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: state.isUploading ? null : _pickAndUpload,
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Upload'),
+            ),
     );
   }
 }
 
-class _DocumentListTile extends ConsumerWidget {
+class _DocumentListTile extends ConsumerStatefulWidget {
   final DocumentModel doc;
+  final bool isSelectMode;
+  final bool isSelected;
+  final VoidCallback onToggle;
 
-  const _DocumentListTile(this.doc);
+  const _DocumentListTile(
+    this.doc, {
+    this.isSelectMode = false,
+    this.isSelected = false,
+    required this.onToggle,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DocumentListTile> createState() => _DocumentListTileState();
+}
+
+class _DocumentListTileState extends ConsumerState<_DocumentListTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push('/cases/${doc.caseId}'),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withAlpha(25),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _fileIcon(doc.fileType),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(doc.fileName, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(Icons.folder, size: 12, color: Colors.grey.shade400),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            doc.caseTitle ?? 'Case #${doc.caseId}',
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+    final d = widget.doc;
+    return MouseRegion(
+      cursor: widget.isSelectMode ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: Matrix4.translationValues(0, _hovered ? -1 : 0, 0),
+        child: Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          color: widget.isSelected ? AppColors.primary.withAlpha(12) : null,
+          elevation: _hovered && !widget.isSelectMode ? 3 : 1,
+          child: InkWell(
+            onTap: widget.isSelectMode ? widget.onToggle : () => context.push('/cases/${d.caseId}'),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.isSelectMode)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: widget.isSelected,
+                          onChanged: (_) => widget.onToggle(),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Row(
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withAlpha(25),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: _fileIcon(d.fileType),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(doc.formattedSize, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade400)),
-                        if (doc.uploadedAt != null) ...[
-                          const SizedBox(width: 8),
-                          Text(doc.uploadedAt!, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade400)),
+                        Text(d.fileName, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.folder, size: 12, color: Colors.grey.shade400),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                d.caseTitle ?? 'Case #${d.caseId}',
+                                style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Text(d.formattedSize, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade400)),
+                            if (d.uploadedAt != null) ...[
+                              const SizedBox(width: 8),
+                              Text(d.uploadedAt!, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade400)),
+                            ],
+                          ],
+                        ),
+                        if (d.description != null) ...[
+                          const SizedBox(height: 4),
+                          Text(d.description!, style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade600)),
                         ],
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.visibility_outlined, size: 20),
+                    onPressed: () => showDocumentViewer(context, ref, d),
+                    tooltip: 'View',
+                  ),
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.secondary.withAlpha(15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.chevron_right, color: AppColors.secondary, size: 18),
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -358,14 +524,12 @@ class _DocumentListTile extends ConsumerWidget {
 }
 
 class _CasePickerDialog extends ConsumerStatefulWidget {
-  final String filePath;
+  final Uint8List fileBytes;
   final String fileName;
-  final void Function(int caseId) onUpload;
 
   const _CasePickerDialog({
-    required this.filePath,
+    required this.fileBytes,
     required this.fileName,
-    required this.onUpload,
   });
 
   @override
@@ -374,6 +538,8 @@ class _CasePickerDialog extends ConsumerStatefulWidget {
 
 class _CasePickerDialogState extends ConsumerState<_CasePickerDialog> {
   int? _selectedCaseId;
+  final _descCtrl = TextEditingController();
+  bool _uploading = false;
 
   @override
   void initState() {
@@ -382,50 +548,80 @@ class _CasePickerDialogState extends ConsumerState<_CasePickerDialog> {
   }
 
   @override
+  void dispose() {
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _doUpload() async {
+    if (_selectedCaseId == null) return;
+    setState(() => _uploading = true);
+    final doc = await ref.read(allDocumentsProvider.notifier).uploadDocument(
+      caseId: _selectedCaseId!,
+      fileBytes: widget.fileBytes,
+      fileName: widget.fileName,
+      description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+    );
+    if (mounted) Navigator.pop(context, doc);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final casesState = ref.watch(casesProvider);
     final theme = Theme.of(context);
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return AlertDialog(
-      title: const Text('Select Case'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('File: ${widget.fileName}', style: theme.textTheme.bodySmall),
-            const SizedBox(height: 16),
-            casesState.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : casesState.cases.isEmpty
-                    ? const Text('No cases available')
-                    : DropdownButtonFormField<int>(
-                        value: _selectedCaseId,
-                        decoration: const InputDecoration(labelText: 'Case *'),
-                        isExpanded: true,
-                        hint: const Text('Select a case'),
-                        items: casesState.cases.map((c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text('${c.caseNumber} — ${c.title}'),
-                        )).toList(),
-                        onChanged: (v) => setState(() => _selectedCaseId = v!),
-                      ),
-          ],
+      title: Text(_uploading ? 'Uploading...' : 'Upload Document'),
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: isMobile ? null : 400,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('File: ${widget.fileName}', style: theme.textTheme.bodySmall),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _descCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: isMobile ? 2 : 3,
+                enabled: !_uploading,
+              ),
+              const SizedBox(height: 16),
+              casesState.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : casesState.cases.isEmpty
+                      ? const Text('No cases available')
+                      : DropdownButtonFormField<int>(
+                          value: _selectedCaseId,
+                          decoration: const InputDecoration(labelText: 'Case *'),
+                          isExpanded: true,
+                          hint: const Text('Select a case'),
+                          items: casesState.cases.map((c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text('${c.caseNumber} — ${c.title}'),
+                          )).toList(),
+                          onChanged: _uploading ? null : (v) => setState(() => _selectedCaseId = v!),
+                        ),
+            ],
+          ),
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _uploading ? null : () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: _selectedCaseId == null
+          onPressed: (_selectedCaseId == null || _uploading)
               ? null
-              : () {
-                  widget.onUpload(_selectedCaseId!);
-                  Navigator.pop(context);
-                },
-          child: const Text('Upload'),
+              : _doUpload,
+          child: _uploading
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Upload'),
         ),
       ],
     );

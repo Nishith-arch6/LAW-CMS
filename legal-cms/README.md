@@ -13,18 +13,25 @@
 
 Legal case management platform with document management, hearings tracking, and case organisation.
 
-**Stack:** FastAPI (Python 3.12) · Flutter · PostgreSQL 16 (Neon)
+**Stack:** FastAPI (Python 3.12) · Flutter 3.22+ · PostgreSQL 16 (Neon)
 
 ## Features
 
 - Case lifecycle management (create, update, track status)
-- Document upload with description and multi-select batch delete
-- File storage in PostgreSQL (BYTEA) with optional S3 backend
-- Hearing scheduling and calendar view
+- Document upload with description field and multi-select batch delete
+- **Document viewer** with inline image preview (pinch-to-zoom), PDF download, and "Open in new tab"
+- Auto-open document viewer after successful upload
+- File storage in PostgreSQL BYTEA (no external storage accounts needed)
+- Hearing scheduling with interactive calendar — tap a date to see hearings
+- Calendar shows upcoming, today, and past hearings with day-override filtering
+- Dashboard with **clickable stat cards** (Total Cases → cases page, Today's Hearings → filtered hearings view)
+- Dashboard recent cases and hearing tiles navigate to their respective detail pages
+- **Hover effects** on all clickable elements (lift + elevation + pointer cursor)
 - Client management
 - JWT-based authentication
-- Responsive web UI (desktop + mobile)
-- OCR text extraction for uploaded documents
+- Responsive web UI — desktop NavigationRail + mobile bottom NavigationBar
+- Profile page
+- Backend warm-up on login (reduces perceived cold-start delay)
 
 ## Structure
 
@@ -42,7 +49,7 @@ Legal case management platform with document management, hearings tracking, and 
 ### Prerequisites
 
 - Python 3.11+
-- PostgreSQL 15 (or Docker Desktop)
+- PostgreSQL 15+
 - Tesseract OCR (optional — for document OCR)
 - Flutter SDK 3.22+ (optional — frontend)
 
@@ -81,14 +88,7 @@ Key variables in `.env`:
 | `SMTP_HOST`                | —               | SMTP server for email notifications  |
 | `S3_BUCKET`                | —               | S3 bucket for production file uploads |
 
-### 3. Run the Database
-
-```bash
-# Using Docker (recommended for dev)
-docker compose up -d db
-```
-
-### 4. Run Migrations
+### 3. Run Migrations
 
 ```bash
 cd backend
@@ -145,28 +145,11 @@ python train.py
 
 ---
 
-## Full Docker Dev Environment
-
-```bash
-# Start all services (PostgreSQL + API + pgAdmin)
-docker compose up -d
-
-# Frontend via Docker
-docker compose -f docker-compose.prod.yml up -d frontend nginx
-```
-
-Dev URLs:
-- API: `http://localhost:8000`
-- Docs: `http://localhost:8000/docs`
-- pgAdmin: `http://localhost:5050` (email: `admin@legalcms.local`, password: `admin`)
-
----
-
 ## Deployment
 
-### Vercel (Current)
+### Vercel (Production)
 
-Deployed on Vercel (serverless functions) with a Neon PostgreSQL database.  
+Deployed entirely on Vercel (serverless functions) with a Neon PostgreSQL database.  
 File uploads are stored directly in PostgreSQL (`BYTEA` column) — no external storage needed.
 
 | Service   | URL |
@@ -175,101 +158,26 @@ File uploads are stored directly in PostgreSQL (`BYTEA` column) — no external 
 | Backend   | [https://law-cms-backend.vercel.app](https://law-cms-backend.vercel.app) |
 | Health    | [https://law-cms-backend.vercel.app/health](https://law-cms-backend.vercel.app/health) |
 
+**Frontend deploy:**
+```bash
+cd frontend
+flutter build web --dart-define=API_BASE_URL=https://law-cms-backend.vercel.app/api --release
+cd build/web
+npx vercel deploy --prod
+```
+
+**Backend deploy:** Automatic via Vercel Git integration on `master` branch pushes.
+
 **Limitations (serverless):**
 - OCR requires Tesseract binary (not available on Vercel)
 - Background scheduler disabled (reminders/digests)
-- Cold starts on first request (~5–10s)
-
-### Render (Recommended for Full Features)
-
-To deploy with persistent storage, OCR, and scheduled tasks:
-
-1. Push to GitHub
-2. Go to [render.com](https://render.com) → New Blueprint
-3. Connect your repo and select `legal-cms/backend/render.yaml`
-4. Set `SECRET_KEY` as an environment variable
-
-### Docker (Self-Hosted)
-
-#### Prerequisites
-
-- Docker & Docker Compose on the host
-- A domain name pointing to the server
-- Ports 80 and 443 open
-
-#### 1. Clone & Configure
-
-```bash
-git clone <repo-url> /opt/legal-cms
-cd /opt/legal-cms
-
-cp backend/.env.example backend/.env
-nano backend/.env
-```
-
-**Required production `.env` changes:**
-```ini
-ENVIRONMENT=prod
-DEBUG=false
-SECRET_KEY=<generate-a-strong-64-char-key>
-POSTGRES_PASSWORD=<strong-db-password>
-CORS_ORIGINS=https://yourdomain.com
-```
-
-#### 2. Update Nginx Domain
-
-Edit `docker/nginx.prod.conf` — replace `legalcms.example.com` with your domain.
-
-#### 3. Obtain SSL Certificate
-
-```bash
-chmod +x scripts/init-ssl.sh
-./scripts/init-ssl.sh yourdomain.com admin@yourdomain.com
-```
-
-#### 4. Deploy
-
-```bash
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
-```
-
-#### 5. Verify
-
-```bash
-curl https://yourdomain.com/health
-# → {"status": "ok"}
-```
-
----
-
-## Production Architecture
-
-```
-                         ┌──────────┐
-                         │  Certbot  │
-                         │ (renewal) │
-                         └────┬─────┘
-                              │
-  ┌─────────┐   :443    ┌─────▼──────┐   :8000   ┌──────────┐   :5432   ┌──────────┐
-  │  Client  │──────────►│   nginx     │──────────►│ Backend  │──────────►│PostgreSQL│
-  │ (browser)│          │ (SSL term)  │           │ (uvicorn)│          │  (data)  │
-  └─────────┘           └─────▲──────┘           └──────────┘           └──────────┘
-                         :80  │                      │
-                         ┌────┴─────┐                 │
-                         │ Frontend │                 │
-                         │ (Flutter │                 │
-                         │  web)    │                 │
-                         └──────────┘          ┌──────▼──────┐
-                                                │  ./uploads  │
-                                                │ (or S3)     │
-                                                └─────────────┘
-```
+- Cold starts on first request (~5–15s) — login page fires a health-check ping to pre-warm the backend
 
 ### File Storage
 
+- **Vercel (production):** PostgreSQL `BYTEA` column — files stored inline in the database
 - **Development:** Local filesystem under `./uploads/`
-- **Production:** Set `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` in `.env` for S3-backed storage
+- **S3 (optional):** Set `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` in `.env` for S3-backed storage
 
 ---
 
@@ -315,15 +223,10 @@ alembic revision --autogenerate -m "desc"          # New migration
 pytest -v                                           # Run tests
 pytest --cov=app --cov-report=term-missing         # Coverage
 
-# Docker
-docker compose up -d                                # Start dev stack
-docker compose -f docker-compose.prod.yml up -d     # Start prod stack
-docker compose logs -f api                          # Tail backend logs
+# Frontend
+flutter build web --dart-define=API_BASE_URL=https://law-cms-backend.vercel.app/api --release
+cd build/web && npx vercel deploy --prod
 
 # ML
 cd ml && python case_classifier/train.py            # Train classifier
-
-# Certificates
-./scripts/init-ssl.sh domain.com email@domain.com   # First-time SSL
-# Renewal is automatic via certbot container
 ```

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 
@@ -28,10 +29,21 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
   DateTime _focusedDay = DateTime.now();
   bool _showCalendar = true;
   String _listFilter = 'upcoming';
+  DateTime? _listDayOverride;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final filter = GoRouterState.of(context).uri.queryParameters['filter'] ?? '';
+      if (filter == 'today' || filter == 'past') {
+        setState(() => _listFilter = filter);
+      }
+      if (filter == 'today') {
+        setState(() => _showCalendar = false);
+      }
+    });
     Future.microtask(() => ref.read(hearingsProvider.notifier).loadHearings());
   }
 
@@ -73,8 +85,43 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
     );
   }
 
+  Widget _dayOverrideBanner(BuildContext context) {
+    final count = _hearingsForDay(ref.read(hearingsProvider).hearings, _listDayOverride!).length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Material(
+        color: AppColors.secondary.withAlpha(20),
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => setState(() => _listDayOverride = null),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 16, color: AppColors.secondary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Showing $count hearing(s) on ${DateFormat('MMM dd, yyyy').format(_listDayOverride!)}',
+                    style: const TextStyle(fontSize: 13, color: AppColors.secondary),
+                  ),
+                ),
+                Text('Show all', style: TextStyle(fontSize: 12, color: AppColors.secondary.withAlpha(180))),
+                const SizedBox(width: 4),
+                const Icon(Icons.close, size: 16, color: AppColors.secondary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _filterRow() {
-    return Row(
+    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(8));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SegmentedButton<bool>(
           segments: const [
@@ -83,18 +130,21 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
           ],
           selected: {_showCalendar},
           onSelectionChanged: (v) => setState(() => _showCalendar = v.first),
+          style: SegmentedButton.styleFrom(shape: shape),
         ),
-        const Spacer(),
-        Flexible(
-          child: SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'upcoming', label: Text('Upcoming')),
-              ButtonSegment(value: 'today', label: Text('Today')),
-              ButtonSegment(value: 'past', label: Text('Past')),
-            ],
-            selected: {_listFilter},
-            onSelectionChanged: (v) => setState(() => _listFilter = v.first),
-          ),
+        const SizedBox(height: 8),
+        SegmentedButton<String>(
+          segments: const [
+            ButtonSegment(value: 'upcoming', label: Text('Upcoming')),
+            ButtonSegment(value: 'today', label: Text('Today')),
+            ButtonSegment(value: 'past', label: Text('Past')),
+          ],
+          selected: {_listFilter},
+          onSelectionChanged: (v) => setState(() {
+            _listFilter = v.first;
+            _listDayOverride = null;
+          }),
+          style: SegmentedButton.styleFrom(shape: shape),
         ),
       ],
     );
@@ -109,6 +159,7 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
       onDaySelected: (d, f) => setState(() {
         _selectedDay = d;
         _focusedDay = f;
+        _listDayOverride = d;
       }),
       onFormatChanged: (f) => setState(() => _format = f),
       onPageChanged: (d) => _focusedDay = d,
@@ -144,12 +195,19 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
     );
   }
 
+  List<HearingModel> _hearingsForDay(List<HearingModel> all, DateTime day) {
+    final dayStr = DateFormat('yyyy-MM-dd').format(day);
+    return all.where((h) => h.hearingDate == dayStr).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(hearingsProvider);
     final hearings = state.hearings;
     final grouped = _groupByDate(hearings);
-    final filtered = _filteredList(hearings);
+    final filtered = _listDayOverride != null
+        ? _hearingsForDay(hearings, _listDayOverride!)
+        : _filteredList(hearings);
     final isWide = MediaQuery.of(context).size.width >= 900;
 
     return Scaffold(
@@ -169,12 +227,8 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
                           margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                           child: _buildCalendar(context, grouped),
                         ),
-                      if (grouped[_selectedDay] != null && _showCalendar)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                          child: Text('${grouped[_selectedDay]!.length} hearing(s) on ${DateFormat('MMM dd, yyyy').format(_selectedDay)}',
-                            style: Theme.of(context).textTheme.bodySmall),
-                        ),
+                      if (_listDayOverride != null)
+                        _dayOverrideBanner(context),
                     ],
                   ),
                 ),
@@ -186,8 +240,8 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                         child: Text(
-                          _showCalendar && grouped[_selectedDay] != null
-                              ? 'Hearings on ${DateFormat('MMM dd, yyyy').format(_selectedDay)}'
+                          _listDayOverride != null
+                              ? 'Hearings on ${DateFormat('MMM dd, yyyy').format(_listDayOverride!)}'
                               : 'All Hearings',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
                         ),
@@ -209,12 +263,8 @@ class _HearingsScreenState extends ConsumerState<HearingsScreen> {
                     margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                     child: _buildCalendar(context, grouped),
                   ),
-                if (grouped[_selectedDay] != null && _showCalendar)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: Text('${grouped[_selectedDay]!.length} hearing(s) on ${DateFormat('MMM dd, yyyy').format(_selectedDay)}',
-                      style: Theme.of(context).textTheme.bodySmall),
-                  ),
+                if (_listDayOverride != null)
+                  _dayOverrideBanner(context),
                 const SizedBox(height: 4),
                 Expanded(child: _hearingList(state, filtered)),
               ],
