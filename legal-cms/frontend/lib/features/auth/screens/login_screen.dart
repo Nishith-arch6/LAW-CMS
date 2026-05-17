@@ -1,12 +1,9 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../providers/auth_provider.dart';
-import '../../../core/api/api_client.dart';
-import '../../../core/api/api_endpoints.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final VoidCallback? onLoginSuccess;
@@ -24,19 +21,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
   late final AnimationController _animCtrl;
-
-  void _warmBackend() {
-    try {
-      Dio().get('${ApiEndpoints.baseUrl.replaceAll('/api', '')}/health');
-    } catch (_) {}
-  }
   late final Animation<double> _fadeIn;
   late final Animation<Offset> _slideUp;
 
   @override
   void initState() {
     super.initState();
-    _warmBackend();
     _animCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),

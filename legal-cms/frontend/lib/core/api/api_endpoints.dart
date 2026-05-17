@@ -26,7 +26,6 @@ class ApiEndpoints {
   static const String documentsList = '/documents/';
   static String caseDocuments(int caseId) => '/documents/case/$caseId';
   static String documentDownload(int id) => '/documents/$id/download';
-  static String documentDelete(int id) => '/documents/$id';
   static String documentOcr(int id) => '/documents/$id/ocr-text';
 
   static const String mlClassify = '/ml/classify';

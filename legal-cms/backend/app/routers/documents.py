@@ -1,4 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, get_db
@@ -67,7 +68,6 @@ async def list_case_documents(
 @router.get("/{doc_id}/download")
 async def download_document(
     doc_id: int,
-    inline: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -75,8 +75,11 @@ async def download_document(
     doc = await service.get_document(doc_id)
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
-    disposition = "inline" if inline else "attachment"
-    return await service.get_file_response(doc, disposition=disposition)
+    return FileResponse(
+        path=doc.file_path,
+        filename=doc.file_name,
+        media_type=doc.file_type or "application/octet-stream",
+    )
 
 
 @router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -14,7 +14,7 @@ final dioProvider = Provider<Dio>((ref) {
     baseUrl: ApiEndpoints.baseUrl,
     connectTimeout: Duration(milliseconds: AppConstants.connectionTimeout),
     receiveTimeout: Duration(milliseconds: AppConstants.receiveTimeout),
-    sendTimeout: Duration(milliseconds: 60000),
+    headers: {'Content-Type': 'application/json'},
   ));
 
   dio.interceptors.add(InterceptorsWrapper(

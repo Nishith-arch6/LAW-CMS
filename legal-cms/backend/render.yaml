@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: law-cms-api
+    env: docker
+    repo: https://github.com/Nishith-arch6/LAW-CMS
+    branch: main
+    rootDir: legal-cms/backend
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: prod
+      - key: DEBUG
+        value: "False"
+      - key: CORS_ORIGINS
+        value: https://law-cms-frontend.vercel.app
+      - key: SECRET_KEY
+        sync: false
+      - key: POSTGRES_SERVER
+        fromDatabase:
+          name: law-cms-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: law-cms-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: law-cms-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: law-cms-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: law-cms-db
+          property: database
+
+databases:
+  - name: law-cms-db
+    plan: free
+    region: ohio
