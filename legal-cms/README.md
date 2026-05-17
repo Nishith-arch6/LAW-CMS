@@ -1,29 +1,39 @@
 # Smart Legal Case Management System
 
-[![Frontend](https://img.shields.io/badge/Frontend-Vercel-000?logo=vercel)](https://law-cms-app.vercel.app)
-[![Backend](https://img.shields.io/badge/Backend-Vercel-000?logo=vercel)](https://law-cms-backend.vercel.app)
+[![Frontend](https://img.shields.io/badge/Frontend-law--cms--app.vercel.app-000?logo=vercel)](https://law-cms-app.vercel.app)
+[![Backend](https://img.shields.io/badge/Backend-law--cms--backend.vercel.app-000?logo=vercel)](https://law-cms-backend.vercel.app)
 [![API Status](https://img.shields.io/badge/API-Health%20%E2%9C%94-brightgreen)](https://law-cms-backend.vercel.app/health)
 [![Database](https://img.shields.io/badge/Database-Neon%20PostgreSQL-blueviolet)](https://neon.tech)
 
-**Live Demo:** [https://law-cms-app.vercel.app](https://law-cms-app.vercel.app)  
+**Live:** [https://law-cms-app.vercel.app](https://law-cms-app.vercel.app)  
 **API:** [https://law-cms-backend.vercel.app](https://law-cms-backend.vercel.app)  
 **Login:** `advocate.sharma@legalcms.com` / `advocate123`
 
 ---
 
-A legal case management platform with AI-powered document analysis.
+Legal case management platform with document management, hearings tracking, and case organisation.
 
-**Stack:** FastAPI (Python 3.12), Flutter, PostgreSQL 16 (Neon), TensorFlow / scikit-learn
+**Stack:** FastAPI (Python 3.12) · Flutter · PostgreSQL 16 (Neon)
+
+## Features
+
+- Case lifecycle management (create, update, track status)
+- Document upload with description and multi-select batch delete
+- File storage in PostgreSQL (BYTEA) with optional S3 backend
+- Hearing scheduling and calendar view
+- Client management
+- JWT-based authentication
+- Responsive web UI (desktop + mobile)
+- OCR text extraction for uploaded documents
 
 ## Structure
 
-| Directory    | Description                              |
-|-------------|------------------------------------------|
-| `backend/`  | FastAPI REST API + SQLAlchemy ORM        |
-| `frontend/` | Flutter cross-platform client            |
-| `ml/`       | ML models (case classifier, document AI) |
-| `docker/`   | Dockerfiles for each service             |
-| `scripts/`  | Deployment and utility scripts           |
+| Directory    | Description                       |
+|-------------|-----------------------------------|
+| `backend/`  | FastAPI REST API + SQLAlchemy ORM |
+| `frontend/` | Flutter web client                |
+| `ml/`       | ML models (case classifier)       |
+| `scripts/`  | Deployment and utility scripts    |
 
 ---
 
@@ -127,12 +137,10 @@ pytest --cov=app --cov-fail-under=80
 
 ## ML Pipeline (optional)
 
-### Train the case classifier
-
 ```bash
 cd ml
 pip install -r requirements.txt
-python case_classifier/train.py
+python train.py
 ```
 
 ---
@@ -158,19 +166,19 @@ Dev URLs:
 
 ### Vercel (Current)
 
-The app is deployed on Vercel (serverless) with a Neon PostgreSQL database.
+Deployed on Vercel (serverless functions) with a Neon PostgreSQL database.  
+File uploads are stored directly in PostgreSQL (`BYTEA` column) — no external storage needed.
 
-| Service   | URL                                                                |
-|-----------|--------------------------------------------------------------------|
+| Service   | URL |
+|-----------|-----|
 | Frontend  | [https://law-cms-app.vercel.app](https://law-cms-app.vercel.app) |
-| Backend   | [https://law-cms-backend.vercel.app](https://law-cms-backend.vercel.app)     |
+| Backend   | [https://law-cms-backend.vercel.app](https://law-cms-backend.vercel.app) |
 | Health    | [https://law-cms-backend.vercel.app/health](https://law-cms-backend.vercel.app/health) |
 
 **Limitations (serverless):**
-- No file upload persistence
-- No OCR (Tesseract not available)
-- No background scheduler (reminders/digests disabled)
-- Cold starts on first request
+- OCR requires Tesseract binary (not available on Vercel)
+- Background scheduler disabled (reminders/digests)
+- Cold starts on first request (~5–10s)
 
 ### Render (Recommended for Full Features)
 
