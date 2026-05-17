@@ -114,12 +114,13 @@ class FileService:
             uploaded_at=str(doc.uploaded_at) if doc.uploaded_at else None,
         )
 
-    async def get_file_response(self, doc: Document) -> Response:
+    async def get_file_response(self, doc: Document, disposition: str = "attachment") -> Response:
+        cd = f'{disposition}; filename="{doc.file_name}"'
         if doc.file_data:
             return Response(
                 content=doc.file_data,
                 media_type=doc.file_type or "application/octet-stream",
-                headers={"Content-Disposition": f'attachment; filename="{doc.file_name}"'},
+                headers={"Content-Disposition": cd},
             )
         if doc.file_path.startswith("s3://"):
             parts = doc.file_path.replace("s3://", "").split("/", 1)
@@ -129,14 +130,14 @@ class FileService:
                     return Response(
                         content=data,
                         media_type=doc.file_type or "application/octet-stream",
-                        headers={"Content-Disposition": f'attachment; filename="{doc.file_name}"'},
+                        headers={"Content-Disposition": cd},
                     )
         if os.path.exists(doc.file_path):
             with open(doc.file_path, "rb") as f:
                 return Response(
                     content=f.read(),
                     media_type=doc.file_type or "application/octet-stream",
-                    headers={"Content-Disposition": f'attachment; filename="{doc.file_name}"'},
+                    headers={"Content-Disposition": cd},
                 )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
