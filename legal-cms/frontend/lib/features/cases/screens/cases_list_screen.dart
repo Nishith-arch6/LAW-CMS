@@ -168,121 +168,174 @@ class _CasesListScreenState extends ConsumerState<CasesListScreen> {
   }
 }
 
-class _CaseCard extends ConsumerWidget {
+class _CaseCard extends StatefulWidget {
   final CaseModel c;
-
   const _CaseCard(this.c);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [AppColors.secondary.withAlpha(8), AppColors.primary.withAlpha(8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Card(
-        margin: EdgeInsets.zero,
-        elevation: 0,
-        color: Colors.white.withAlpha(240),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: InkWell(
-          onTap: () => context.push('/cases/${c.id}'),
+  State<_CaseCard> createState() => _CaseCardState();
+}
+
+class _CaseCardState extends State<_CaseCard> {
+  bool _isHovered = false;
+
+  Color _statusColor(String s) {
+    switch (s.toUpperCase()) {
+      case 'ACTIVE': return const Color(0xFF10B981);
+      case 'PENDING': return const Color(0xFFF59E0B);
+      case 'CLOSED': return const Color(0xFF64748B);
+      case 'ADJOURNED': return AppColors.accent;
+      default: return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.c;
+    final statusCol = _statusColor(c.status);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        margin: const EdgeInsets.only(bottom: 10),
+        transform: _isHovered ? Matrix4.translationValues(0, -2, 0) : Matrix4.identity(),
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: _statusColor(c.status).withAlpha(25),
-                              borderRadius: BorderRadius.circular(6),
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF1E1E2E),
+              const Color(0xFF161622).withValues(alpha: 0.95),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: _isHovered
+                ? Colors.white.withValues(alpha: 0.12)
+                : Colors.white.withValues(alpha: 0.05),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _isHovered
+                  ? statusCol.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.25),
+              blurRadius: _isHovered ? 20 : 10,
+              offset: Offset(0, _isHovered ? 6 : 4),
+            ),
+          ],
+        ),
+        child: Card(
+          margin: EdgeInsets.zero,
+          elevation: 0,
+          color: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: InkWell(
+            onTap: () => context.push('/cases/${c.id}'),
+            borderRadius: BorderRadius.circular(16),
+            splashColor: statusCol.withValues(alpha: 0.08),
+            highlightColor: Colors.transparent,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusCol.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: statusCol.withValues(alpha: 0.25), width: 1),
+                              ),
+                              child: Text(
+                                c.statusDisplay,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: statusCol,
+                                ),
+                              ),
                             ),
-                            child: Text(c.statusDisplay,
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
-                                    color: _statusColor(c.status))),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(c.caseNumber,
-                              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey.shade400)),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(c.title, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                      if (c.clientName != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Row(
-                            children: [
-                              Icon(Icons.person_outline, size: 13, color: Colors.grey.shade400),
-                              const SizedBox(width: 4),
-                              Text(c.clientName!, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-                            ],
+                            const SizedBox(width: 10),
+                            Text(
+                              c.caseNumber,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          c.title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
-                      if (c.nextHearingDate != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Row(
+                        if (c.clientName != null) ...[
+                          const SizedBox(height: 6),
+                          Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accent.withAlpha(20),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.calendar_today, size: 11, color: AppColors.accent),
-                                    const SizedBox(width: 4),
-                                    Text('Next: ${c.nextHearingDate}',
-                                        style: TextStyle(fontSize: 11, color: AppColors.accent)),
-                                  ],
-                                ),
+                              Icon(Icons.person_outline, size: 14, color: Colors.grey.shade500),
+                              const SizedBox(width: 6),
+                              Text(
+                                c.clientName!,
+                                style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
                               ),
                             ],
                           ),
-                        ),
-                    ],
+                        ],
+                        if (c.nextHearingDate != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.accent.withValues(alpha: 0.2), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.calendar_today, size: 12, color: AppColors.accent),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Next: ${c.nextHearingDate}',
+                                  style: TextStyle(fontSize: 12, color: AppColors.accent),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withAlpha(15),
-                    borderRadius: BorderRadius.circular(10),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: statusCol.withValues(alpha: _isHovered ? 0.2 : 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.chevron_right, color: statusCol, size: 22),
                   ),
-                  child: const Icon(Icons.chevron_right,
-                      color: AppColors.secondary, size: 20),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
-  }
-
-  Color _statusColor(String s) {
-    switch (s.toUpperCase()) {
-      case 'ACTIVE': return AppColors.secondary;
-      case 'PENDING': return AppColors.warning;
-      case 'CLOSED': return AppColors.success;
-      case 'ADJOURNED': return AppColors.accent;
-      default: return Colors.grey;
-    }
   }
 }

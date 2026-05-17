@@ -144,7 +144,7 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
                     children: [
                       Text(c.name,
                           style: theme.textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600)),
+                              ?.copyWith(fontWeight: FontWeight.w600, color: theme.brightness == Brightness.dark ? Colors.grey.shade900 : null)),
                       const SizedBox(height: 2),
                       if (c.email != null)
                         _infoText(c.email!, Icons.email_outlined),
@@ -171,14 +171,15 @@ class _ClientsListScreenState extends ConsumerState<ClientsListScreen> {
   }
 
   Widget _infoText(String text, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: Colors.grey.shade400),
+          Icon(icon, size: 13, color: isDark ? Colors.grey.shade600 : Colors.grey.shade400),
           const SizedBox(width: 4),
-          Text(text, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          Text(text, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade700 : Colors.grey.shade500)),
         ],
       ),
     );

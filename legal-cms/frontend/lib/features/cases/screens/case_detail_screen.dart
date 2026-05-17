@@ -156,7 +156,7 @@ class _CaseHeader extends StatelessWidget {
                     const SizedBox(width: 8),
                     Chip(
                       label: Text(c.caseType, style: const TextStyle(fontSize: 11)),
-                      backgroundColor: Colors.grey.shade200,
+                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
                       padding: EdgeInsets.zero,
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -348,7 +348,7 @@ class _DocumentsTab extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: theme.colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(d.ocrText!, style: theme.textTheme.bodySmall),

@@ -13,7 +13,7 @@ services:
       - key: DEBUG
         value: "False"
       - key: CORS_ORIGINS
-        value: https://law-cms-frontend.vercel.app
+        value: https://law-cms-app.vercel.app
       - key: SECRET_KEY
         sync: false
       - key: POSTGRES_SERVER
