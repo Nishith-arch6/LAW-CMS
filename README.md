@@ -1,1 +1,1 @@
-https://web-taupe-iota-23.vercel.app - LAW CMS 
+https://law-cms-app.vercel.app - LAW CMS 
